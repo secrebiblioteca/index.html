@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Biblioteca con QR</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom Styles -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .tab-button.active {
+            border-bottom-color: #3b82f6; /* blue-500 */
+            color: #3b82f6;
+        }
+        #qr-reader video {
+            width: 100% !important;
+            border-radius: 0.5rem;
+        }
+        #qr-reader span {
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <div class="container mx-auto p-4 md:p-8">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-900">Sistema de Gestión de Biblioteca</h1>
+            <p class="text-lg text-gray-600 mt-2">Gestiona tu inventario y préstamos de forma sencilla.</p>
+        </header>
+
+        <!-- Tabs Navigation -->
+        <div class="mb-6 border-b border-gray-200">
+            <nav class="flex -mb-px space-x-6" aria-label="Tabs">
+                <button onclick="changeTab('prestamos')" class="tab-button active whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                    <i class="fas fa-qrcode mr-2"></i>Préstamos y Devoluciones
+                </button>
+                <button onclick="changeTab('libros')" class="tab-button whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                    <i class="fas fa-book mr-2"></i>Gestionar Libros
+                </button>
+                <button onclick="changeTab('miembros')" class="tab-button whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                    <i class="fas fa-users mr-2"></i>Gestionar Miembros
+                </button>
+            </nav>
+        </div>
+
+        <!-- Main Content -->
+        <main id="main-content">
+            <!-- Tab de Préstamos -->
+            <div id="prestamos" class="tab-content">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <!-- Scanner -->
+                    <div class="bg-white p-6 rounded-lg shadow-md">
+                        <h2 class="text-2xl font-semibold mb-4">Escanear Código de Libro</h2>
+                        <div id="qr-reader" class="w-full"></div>
+                         <div id="qr-reader-status" class="mt-4 text-center text-gray-600"></div>
+                        <button id="start-scan-btn" class="mt-4 w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300">
+                            <i class="fas fa-camera mr-2"></i>Iniciar Escáner
+                        </button>
+                    </div>
+                    <!-- Loan Status -->
+                    <div id="loan-status-container" class="bg-white p-6 rounded-lg shadow-md flex flex-col items-center justify-center text-center">
+                        <i class="fas fa-barcode text-6xl text-gray-300 mb-4"></i>
+                        <h3 class="text-xl font-semibold text-gray-700">Esperando escaneo...</h3>
+                        <p class="text-gray-500 mt-2">Escanea el código QR o de barras de un libro para ver su estado y gestionar el préstamo.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab de Libros -->
+            <div id="libros" class="tab-content hidden">
+                 <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h2 class="text-2xl font-semibold mb-4">Añadir Nuevo Libro</h2>
+                    <form id="add-book-form" class="space-y-4">
+                        <input type="text" id="book-title" placeholder="Título del libro" required class="w-full p-3 border border-gray-300 rounded-lg">
+                        <input type="text" id="book-author" placeholder="Autor" required class="w-full p-3 border border-gray-300 rounded-lg">
+                        <input type="text" id="book-isbn" placeholder="ISBN (Opcional)" class="w-full p-3 border border-gray-300 rounded-lg">
+                        <button type="submit" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg transition duration-300">
+                            <i class="fas fa-plus mr-2"></i>Añadir Libro al Inventario
+                        </button>
+                    </form>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md mt-8">
+                    <h2 class="text-2xl font-semibold mb-4">Inventario de Libros</h2>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead>
+                                <tr class="bg-gray-50 border-b">
+                                    <th class="p-4 font-semibold">Título</th>
+                                    <th class="p-4 font-semibold">Autor</th>
+                                    <th class="p-4 font-semibold">Estado</th>
+                                    <th class="p-4 font-semibold">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="books-table-body">
+                                <!-- Book rows will be inserted here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab de Miembros -->
+            <div id="miembros" class="tab-content hidden">
+                 <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h2 class="text-2xl font-semibold mb-4">Añadir Nuevo Miembro</h2>
+                    <form id="add-member-form" class="space-y-4">
+                        <input type="text" id="member-name" placeholder="Nombre completo del miembro" required class="w-full p-3 border border-gray-300 rounded-lg">
+                        <button type="submit" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg transition duration-300">
+                            <i class="fas fa-user-plus mr-2"></i>Añadir Miembro
+                        </button>
+                    </form>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md mt-8">
+                    <h2 class="text-2xl font-semibold mb-4">Lista de Miembros</h2>
+                     <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead>
+                                <tr class="bg-gray-50 border-b">
+                                    <th class="p-4 font-semibold">Nombre</th>
+                                    <th class="p-4 font-semibold">ID de Miembro</th>
+                                    <th class="p-4 font-semibold">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="members-table-body">
+                                <!-- Member rows will be inserted here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- QR Code Modal -->
+    <div id="qr-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-xl text-center">
+            <h2 class="text-2xl font-bold mb-4" id="qr-modal-title">Código QR del Libro</h2>
+            <div id="qrcode" class="flex justify-center"></div>
+            <p class="mt-4 text-sm text-gray-600">Imprime este código y pégalo en el libro.</p>
+            <button onclick="closeModal('qr-modal')" class="mt-6 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-6 rounded-lg">Cerrar</button>
+        </div>
+    </div>
+    
+    <!-- Custom Alert Modal -->
+    <div id="alert-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50 p-4">
+        <div class="bg-white p-6 rounded-lg shadow-xl text-center max-w-sm w-full">
+            <div id="alert-modal-icon" class="mb-4"></div>
+            <h2 class="text-xl font-bold mb-2" id="alert-modal-title"></h2>
+            <p class="text-gray-600" id="alert-modal-message"></p>
+            <button onclick="closeModal('alert-modal')" class="mt-6 w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-lg">Entendido</button>
+        </div>
+    </div>
+    
+    <!-- Confirmation Modal -->
+    <div id="confirm-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50 p-4">
+        <div class="bg-white p-6 rounded-lg shadow-xl text-center max-w-sm w-full">
+            <div class="mb-4"><i class="fas fa-exclamation-triangle text-5xl text-yellow-500"></i></div>
+            <h2 class="text-xl font-bold mb-2" id="confirm-modal-title">Confirmar Acción</h2>
+            <p class="text-gray-600" id="confirm-modal-message"></p>
+            <div class="mt-6 flex justify-end space-x-4">
+                <button id="confirm-cancel-btn" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-6 rounded-lg">Cancelar</button>
+                <button id="confirm-ok-btn" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-lg">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- QR Code & Scanner Libraries -->
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/davidshimjs-qrcodejs@0.0.2/qrcode.min.js"></script>
+    
+    <!-- Firebase SDK -->
+    <script type="module">
+        // Firebase Imports
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, collection, addDoc, getDoc, getDocs, setDoc, deleteDoc, query, where, onSnapshot, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- CONFIGURATION ---
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "your-api-key", authDomain: "your-auth-domain", projectId: "your-project-id" };
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'library-app-default';
+
+        // --- INITIALIZATION ---
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        let userId = null;
+        let html5QrCode = null;
+
+        // Collections references
+        let booksCollection, membersCollection;
+
+        // --- AUTHENTICATION ---
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                console.log("User is signed in:", user.uid);
+                userId = user.uid;
+                // Once authenticated, set up the collections with the correct path
+                booksCollection = collection(db, "artifacts", appId, "users", userId, "books");
+                membersCollection = collection(db, "artifacts", appId, "users", userId, "members");
+                // Start listening for data changes
+                listenForBooks();
+                listenForMembers();
+            } else {
+                console.log("User is signed out. Attempting to sign in.");
+                try {
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                       console.log("Attempting sign in with custom token.");
+                       await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                       console.log("No custom token, signing in anonymously.");
+                       await signInAnonymously(auth);
+                    }
+                } catch (error) {
+                    console.error("Error signing in with custom token:", error);
+                    console.log("Falling back to anonymous sign-in.");
+                    await signInAnonymously(auth);
+                }
+            }
+        });
+
+        // --- UI & MODALS ---
+        window.changeTab = (tabName) => {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.add('hidden'));
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            
+            document.getElementById(tabName).classList.remove('hidden');
+            document.querySelector(`button[onclick="changeTab('${tabName}')"]`).classList.add('active');
+            
+            if (tabName !== 'prestamos' && html5QrCode && html5QrCode.isScanning) {
+                stopScanner();
+            }
+        };
+        
+        window.closeModal = (modalId) => {
+             document.getElementById(modalId).classList.add('hidden');
+        }
+
+        function showAlert(title, message, type = 'info') {
+            const modal = document.getElementById('alert-modal');
+            document.getElementById('alert-modal-title').textContent = title;
+            document.getElementById('alert-modal-message').textContent = message;
+            
+            const iconEl = document.getElementById('alert-modal-icon');
+            if (type === 'success') {
+                iconEl.innerHTML = `<i class="fas fa-check-circle text-5xl text-green-500"></i>`;
+            } else if (type === 'error') {
+                 iconEl.innerHTML = `<i class="fas fa-times-circle text-5xl text-red-500"></i>`;
+            } else {
+                 iconEl.innerHTML = `<i class="fas fa-info-circle text-5xl text-blue-500"></i>`;
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+        let confirmCallback = null;
+        function showConfirm(title, message, callback) {
+            const modal = document.getElementById('confirm-modal');
+            document.getElementById('confirm-modal-title').textContent = title;
+            document.getElementById('confirm-modal-message').textContent = message;
+            confirmCallback = callback;
+            modal.classList.remove('hidden');
+        }
+        document.getElementById('confirm-cancel-btn').addEventListener('click', () => {
+            document.getElementById('confirm-modal').classList.add('hidden');
+            confirmCallback = null;
+        });
+        document.getElementById('confirm-ok-btn').addEventListener('click', () => {
+            if (confirmCallback) {
+                confirmCallback();
+            }
+            document.getElementById('confirm-modal').classList.add('hidden');
+            confirmCallback = null;
+        });
+
+
+        // --- BOOK MANAGEMENT ---
+        const addBookForm = document.getElementById('add-book-form');
+        addBookForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!userId) return showAlert('Error', 'Debes iniciar sesión para añadir libros.', 'error');
+            
+            const title = document.getElementById('book-title').value;
+            const author = document.getElementById('book-author').value;
+            const isbn = document.getElementById('book-isbn').value;
+            const uniqueId = `book_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+            try {
+                await addDoc(booksCollection, {
+                    title,
+                    author,
+                    isbn,
+                    uniqueId,
+                    status: 'available', // available, loaned
+                    loanedTo: null,
+                    loanedToName: null,
+                    loanDate: null,
+                    createdAt: serverTimestamp()
+                });
+                showAlert('Éxito', 'Libro añadido al inventario.', 'success');
+                addBookForm.reset();
+            } catch (error) {
+                console.error("Error adding book: ", error);
+                showAlert('Error', 'No se pudo añadir el libro.', 'error');
+            }
+        });
+
+        function listenForBooks() {
+            if (!booksCollection) return;
+            onSnapshot(booksCollection, (snapshot) => {
+                const booksTableBody = document.getElementById('books-table-body');
+                booksTableBody.innerHTML = ''; // Clear table
+                snapshot.forEach(doc => {
+                    const book = doc.data();
+                    const row = document.createElement('tr');
+                    row.className = 'border-b hover:bg-gray-50';
+                    let statusBadge;
+                    if (book.status === 'available') {
+                        statusBadge = `<span class="px-2 py-1 text-xs font-semibold text-green-800 bg-green-200 rounded-full">Disponible</span>`;
+                    } else {
+                        statusBadge = `<span class="px-2 py-1 text-xs font-semibold text-yellow-800 bg-yellow-200 rounded-full">Prestado</span>`;
+                    }
+
+                    row.innerHTML = `
+                        <td class="p-4">${book.title}</td>
+                        <td class="p-4">${book.author}</td>
+                        <td class="p-4">${statusBadge}</td>
+                        <td class="p-4 space-x-2">
+                            <button onclick="window.showQrCode('${book.uniqueId}', '${book.title}')" class="text-blue-500 hover:text-blue-700"><i class="fas fa-qrcode"></i></button>
+                            <button onclick="window.deleteBook('${doc.id}')" class="text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>
+                        </td>
+                    `;
+                    booksTableBody.appendChild(row);
+                });
+            });
+        }
+        
+        window.showQrCode = (uniqueId, title) => {
+            const modal = document.getElementById('qr-modal');
+            document.getElementById('qr-modal-title').textContent = `QR para: ${title}`;
+            const qrcodeContainer = document.getElementById('qrcode');
+            qrcodeContainer.innerHTML = '';
+            new QRCode(qrcodeContainer, {
+                text: uniqueId,
+                width: 200,
+                height: 200,
+            });
+            modal.classList.remove('hidden');
+        }
+
+        window.deleteBook = (docId) => {
+            showConfirm(
+                'Eliminar Libro', 
+                '¿Estás seguro de que quieres eliminar este libro? Esta acción no se puede deshacer.', 
+                async () => {
+                    try {
+                        await deleteDoc(doc(db, booksCollection.path, docId));
+                        showAlert('Éxito', 'Libro eliminado.', 'success');
+                    } catch (error) {
+                        console.error("Error deleting book: ", error);
+                         showAlert('Error', 'No se pudo eliminar el libro.', 'error');
+                    }
+                }
+            );
+        };
+
+
+        // --- MEMBER MANAGEMENT ---
+        const addMemberForm = document.getElementById('add-member-form');
+        addMemberForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!userId) return showAlert('Error', 'Debes iniciar sesión para añadir miembros.', 'error');
+            
+            const name = document.getElementById('member-name').value;
+            const memberId = `member_${Date.now()}`;
+
+            try {
+                await addDoc(membersCollection, {
+                    name: name,
+                    memberId: memberId,
+                    createdAt: serverTimestamp()
+                });
+                showAlert('Éxito', 'Miembro añadido correctamente.', 'success');
+                addMemberForm.reset();
+            } catch (error) {
+                console.error("Error adding member: ", error);
+                showAlert('Error', 'No se pudo añadir el miembro.', 'error');
+            }
+        });
+
+        function listenForMembers() {
+            if (!membersCollection) return;
+            onSnapshot(membersCollection, (snapshot) => {
+                const membersTableBody = document.getElementById('members-table-body');
+                membersTableBody.innerHTML = '';
+                snapshot.forEach(doc => {
+                    const member = doc.data();
+                    const row = document.createElement('tr');
+                    row.className = 'border-b hover:bg-gray-50';
+                    row.innerHTML = `
+                        <td class="p-4">${member.name}</td>
+                        <td class="p-4 font-mono text-sm">${member.memberId}</td>
+                        <td class="p-4">
+                            <button onclick="window.deleteMember('${doc.id}')" class="text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>
+                        </td>
+                    `;
+                    membersTableBody.appendChild(row);
+                });
+            });
+        }
+        
+        window.deleteMember = (docId) => {
+             showConfirm(
+                'Eliminar Miembro',
+                '¿Estás seguro de que quieres eliminar este miembro?',
+                async () => {
+                    try {
+                        await deleteDoc(doc(db, membersCollection.path, docId));
+                        showAlert('Éxito', 'Miembro eliminado.', 'success');
+                    } catch (error) {
+                        console.error("Error deleting member: ", error);
+                        showAlert('Error', 'No se pudo eliminar el miembro.', 'error');
+                    }
+                }
+            );
+        };
+
+
+        // --- LOAN MANAGEMENT & QR SCANNER ---
+        function onScanSuccess(decodedText, decodedResult) {
+            console.log(`Scan result: ${decodedText}`, decodedResult);
+            stopScanner();
+            handleScannedBook(decodedText);
+        }
+
+        function onScanFailure(error) {
+            // console.warn(`Code scan error = ${error}`);
+        }
+
+        async function handleScannedBook(uniqueId) {
+            const q = query(booksCollection, where("uniqueId", "==", uniqueId));
+            const querySnapshot = await getDocs(q);
+
+            if (querySnapshot.empty) {
+                showAlert('Libro no encontrado', 'El código escaneado no corresponde a ningún libro en el inventario.', 'error');
+                return;
+            }
+
+            const bookDoc = querySnapshot.docs[0];
+            const bookData = bookDoc.data();
+            updateLoanStatusUI(bookDoc.id, bookData);
+        }
+
+        async function updateLoanStatusUI(docId, book) {
+            const container = document.getElementById('loan-status-container');
+            if (book.status === 'available') {
+                const membersSnapshot = await getDocs(membersCollection);
+                let options = '<option value="">Selecciona un miembro</option>';
+                membersSnapshot.forEach(doc => {
+                    const member = doc.data();
+                    options += `<option value="${doc.id}|${member.name}">${member.name}</option>`;
+                });
+
+                container.innerHTML = `
+                    <i class="fas fa-book-open text-6xl text-green-500 mb-4"></i>
+                    <h3 class="text-xl font-semibold">${book.title}</h3>
+                    <p class="text-gray-500">por ${book.author}</p>
+                    <p class="mt-2 text-lg font-bold text-green-600">¡DISPONIBLE!</p>
+                    <div class="mt-4 w-full">
+                        <select id="member-select" class="w-full p-3 border border-gray-300 rounded-lg">
+                           ${options}
+                        </select>
+                        <button onclick="window.checkOutBook('${docId}')" class="mt-2 w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg">Prestar Libro</button>
+                    </div>
+                `;
+            } else {
+                container.innerHTML = `
+                    <i class="fas fa-book text-6xl text-yellow-500 mb-4"></i>
+                    <h3 class="text-xl font-semibold">${book.title}</h3>
+                    <p class="text-gray-500">por ${book.author}</p>
+                    <p class="mt-2 text-lg font-bold text-yellow-600">PRESTADO</p>
+                    <div class="mt-4 text-center bg-gray-100 p-4 rounded-lg w-full">
+                        <p class="font-semibold">Prestado a: ${book.loanedToName || 'Desconocido'}</p>
+                        <p class="text-sm">Fecha de préstamo: ${book.loanDate ? new Date(book.loanDate.seconds * 1000).toLocaleDateString() : 'N/A'}</p>
+                    </div>
+                    <button onclick="window.checkInBook('${docId}')" class="mt-4 w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg">Registrar Devolución</button>
+                `;
+            }
+        }
+        
+        window.checkOutBook = async (docId) => {
+            const select = document.getElementById('member-select');
+            const selectedValue = select.value;
+            if (!selectedValue) {
+                showAlert('Información requerida', 'Por favor, selecciona un miembro para prestar el libro.', 'info');
+                return;
+            }
+            const [memberId, memberName] = selectedValue.split('|');
+            
+            try {
+                const bookRef = doc(db, booksCollection.path, docId);
+                await updateDoc(bookRef, {
+                    status: 'loaned',
+                    loanedTo: memberId,
+                    loanedToName: memberName,
+                    loanDate: serverTimestamp()
+                });
+                showAlert('Préstamo Exitoso', 'El libro ha sido prestado.', 'success');
+                 document.getElementById('loan-status-container').innerHTML = `
+                    <i class="fas fa-barcode text-6xl text-gray-300 mb-4"></i>
+                    <h3 class="text-xl font-semibold text-gray-700">Esperando escaneo...</h3>
+                    <p class="text-gray-500 mt-2">Escanea el código de otro libro.</p>
+                `;
+            } catch (error) {
+                console.error("Error checking out book: ", error);
+                showAlert('Error', 'No se pudo realizar el préstamo.', 'error');
+            }
+        };
+        
+        window.checkInBook = async (docId) => {
+            try {
+                const bookRef = doc(db, booksCollection.path, docId);
+                await updateDoc(bookRef, {
+                    status: 'available',
+                    loanedTo: null,
+                    loanedToName: null,
+                    loanDate: null
+                });
+                showAlert('Devolución Exitosa', 'El libro está disponible de nuevo.', 'success');
+                document.getElementById('loan-status-container').innerHTML = `
+                    <i class="fas fa-barcode text-6xl text-gray-300 mb-4"></i>
+                    <h3 class="text-xl font-semibold text-gray-700">Esperando escaneo...</h3>
+                    <p class="text-gray-500 mt-2">Escanea el código de otro libro.</p>
+                `;
+            } catch (error) {
+                console.error("Error checking in book: ", error);
+                showAlert('Error', 'No se pudo registrar la devolución.', 'error');
+            }
+        };
+
+        function startScanner() {
+            if (!html5QrCode) {
+                 html5QrCode = new Html5Qrcode("qr-reader");
+            }
+
+            if (html5QrCode.isScanning) {
+                console.log("Scanner is already running.");
+                return;
+            }
+            
+            document.getElementById('start-scan-btn').disabled = true;
+            document.getElementById('start-scan-btn').innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Iniciando Cámara...';
+            document.getElementById('qr-reader-status').textContent = 'Solicitando permiso para la cámara...';
+
+
+            html5QrCode.start(
+                { facingMode: "environment" },
+                {
+                    fps: 10,
+                    qrbox: { width: 250, height: 250 }
+                },
+                onScanSuccess,
+                onScanFailure
+            ).then(() => {
+                 document.getElementById('start-scan-btn').innerHTML = '<i class="fas fa-stop-circle mr-2"></i>Detener Escáner';
+                 document.getElementById('start-scan-btn').disabled = false;
+                 document.getElementById('start-scan-btn').onclick = stopScanner;
+                 document.getElementById('qr-reader-status').textContent = 'Apunte la cámara al código QR o de barras.';
+            }).catch(err => {
+                console.error("Failed to start scanner", err);
+                document.getElementById('qr-reader-status').textContent = 'Error al iniciar la cámara. Asegúrate de dar permiso.';
+                document.getElementById('start-scan-btn').innerHTML = '<i class="fas fa-camera mr-2"></i>Reintentar Escáner';
+                document.getElementById('start-scan-btn').disabled = false;
+            });
+        }
+        
+        function stopScanner() {
+            if (html5QrCode && html5QrCode.isScanning) {
+                html5QrCode.stop().then(() => {
+                    console.log("QR Code scanning stopped.");
+                }).catch(err => {
+                    console.error("Failed to stop scanner", err);
+                });
+            }
+             document.getElementById('start-scan-btn').innerHTML = '<i class="fas fa-camera mr-2"></i>Iniciar Escáner';
+             document.getElementById('start-scan-btn').onclick = startScanner;
+             document.getElementById('qr-reader-status').textContent = '';
+        }
+
+        document.getElementById('start-scan-btn').addEventListener('click', startScanner);
+
+    </script>
+
+</body>
+</html>
+```
+
+### Cómo Guardar el Código
+
+1.  **Copiar:** Haz clic en el botón **"Copiar"** en la esquina superior derecha del bloque de código de arriba.
+2.  **Pegar:** Abre un editor de texto plano en tu computadora (como **Bloc de notas** en Windows, **TextEdit** en Mac, o un editor más avanzado como **VS Code**). Pega el código que copiaste.
+3.  **Guardar:** Ve a `Archivo > Guardar como...`. En el cuadro de diálogo, asegúrate de:
+    * Nombrar el archivo: `index.html`
+    * En "Tipo" o "Guardar como tipo", selecciona **"Todos los archivos (\*.\*)"**. Esto es muy importante para que no se guarde como un archivo de texto (`.txt`).
+    * Verifica que la codificación sea **UTF-8**.
+
+¡Y listo! Ya tienes el archivo `index.html`. Este es el archivo que necesitas subir a tu repositorio de GitHub para publicarlo con GitHub Pag
